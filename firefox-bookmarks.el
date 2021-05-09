@@ -1,4 +1,4 @@
-;;; counsel-firefox-bookmarks.el --- Complete Firefox bookmarks with Ivy  -*- lexical-binding: t; -*-
+;;; firefox-bookmarks.el --- Complete Firefox bookmarks  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2015-2018  Free Software Foundation, Inc.
 
@@ -22,39 +22,31 @@
 
 ;;; Code:
 
-(require 'ivy)
-
-;;** `counsel-firefox-bookmarks'
-(defvar counsel-firefox-bookmarks-file
+;;** `firefox-bookmarks'
+(defvar firefox-bookmarks-file
   (car (file-expand-wildcards "~/.mozilla/firefox/*/bookmarks.html"))
   "Firefox's automatically exported HTML bookmarks file.")
 
-(defface counsel-firefox-bookmarks-tag
+(defface firefox-bookmarks-tag
   '((t :inherit font-lock-comment-face))
-  "Face used by `counsel-firefox-bookmarks' for tags."
-  :group 'ivy-faces)
+  "Face used by `firefox-bookmarks' for tags.")
 
-(defface counsel-firefox-bookmarks-location
+(defface firefox-bookmarks-location
   '((t :inherit link))
-  "Face used by `counsel-firefox-bookmarks' for locations."
-  :group 'ivy-faces)
-
-(defun counsel-firefox-bookmarks-action (x)
-  "Browse candidate X."
-  (browse-url (cadr x)))
+  "Face used by `firefox-bookmarks' for locations.")
 
 (declare-function xml-substitute-special "xml")
 
-(defun counsel--firefox-bookmarks-candidates ()
-  "Return list of `counsel-firefox-bookmarks' candidates."
-  (unless (and counsel-firefox-bookmarks-file
-               (file-readable-p counsel-firefox-bookmarks-file))
-    (signal 'file-error (list "Opening `counsel-firefox-bookmarks-file'"
+(defun firefox-bookmarks-candidates ()
+  "Return list of `firefox-bookmarks' candidates."
+  (unless (and firefox-bookmarks-file
+               (file-readable-p firefox-bookmarks-file))
+    (signal 'file-error (list "Opening `firefox-bookmarks-file'"
                               "No such readable file"
-                              counsel-firefox-bookmarks-file)))
+                              firefox-bookmarks-file)))
   (require 'xml)
   (with-temp-buffer
-    (insert-file-contents counsel-firefox-bookmarks-file)
+    (insert-file-contents firefox-bookmarks-file)
     (let ((case-fold-search t)
           candidates)
       (while (re-search-forward
@@ -67,40 +59,36 @@
                           (mapconcat
                            (lambda (tag)
                              (put-text-property 0 (length tag) 'face
-                                                'counsel-firefox-bookmarks-tag
+                                                'firefox-bookmarks-tag
                                                 tag)
                              tag)
                            (split-string (match-string 1 a) "," t)
                            ":"))))
           (put-text-property 0 (length href)
                              'face
-                             'counsel-firefox-bookmarks-location
+                             'firefox-bookmarks-location
                              href)
-          (push (list
-                 (mapconcat #'identity
-                            (remove nil
-                                    (list name
-                                          (when tags (concat ":" tags ":"))
-                                          (unless (string= name href)
-                                            href)))
-                            "  ")
-                 href)
-                candidates)))
+          (push (mapconcat #'identity
+                           (remove nil
+                                   (list name
+                                         (when tags (concat ":" tags ":"))
+                                         (unless (string= name href)
+                                           href)))
+                           "  ") candidates)))
       candidates)))
 
 ;;;###autoload
-(defun counsel-firefox-bookmarks ()
-  "Complete Firefox bookmarks with Ivy.
+(defun firefox-bookmarks ()
+  "Complete Firefox bookmarks.
 This requires HTML bookmark export to be enabled in Firefox.
 To do this, open URL `about:config' in Firefox, make sure that
 the value of the setting \"browser.bookmarks.autoExportHTML\" is
 \"true\" by, say, double-clicking it, and then restart Firefox."
   (interactive)
-  (ivy-read "bookmark: " (counsel--firefox-bookmarks-candidates)
-            :history 'counsel-firefox-bookmarks-history
-            :action #'counsel-firefox-bookmarks-action
-            :caller 'counsel-firefox-bookmarks
-            :require-match t))
+  (let ((candidate
+         (completing-read "bookmark: " (firefox-bookmarks-candidates)
+                          nil t nil 'firefox-bookmarks-history)))
+    (browse-url (car (last (split-string candidate))))))
 
-(provide 'counsel-firefox-bookmarks)
-;;; counsel-firefox-bookmarks.el ends here
+(provide 'firefox-bookmarks)
+;;; firefox-bookmarks.el ends here
